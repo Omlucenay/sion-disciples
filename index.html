@@ -558,25 +558,90 @@ function initDate() {
 }
 
 // STREAK
+function getDateKey(offsetDays) {
+  var d = new Date();
+  d.setDate(d.getDate() + (offsetDays || 0));
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getDayHabitStatus(dateStr) {
+  // Returns: 'full' | 'partial' | 'none'
+  var priere = localStorage.getItem('habit_priere_' + dateStr);
+  var lecture = localStorage.getItem('habit_lecture_' + dateStr);
+  var count = (priere ? 1 : 0) + (lecture ? 1 : 0);
+  if (count === 2) return 'full';
+  if (count === 1) return 'partial';
+  return 'none';
+}
+
+function calculateStreak() {
+  var streak = 0;
+  var i = 0;
+  // Don't count today in streak (not finished yet)
+  // Count backwards from yesterday
+  while (true) {
+    var dateStr = getDateKey(-(i + 1));
+    var status = getDayHabitStatus(dateStr);
+    if (status === 'full') {
+      streak++;
+      i++;
+    } else {
+      break;
+    }
+    if (i > 365) break;
+  }
+  return streak;
+}
+
 function initStreak() {
-  var streak = parseInt(localStorage.getItem('streak') || '14');
+  var streak = calculateStreak();
   document.getElementById('streak-count').textContent = streak;
+
   var dayNames = ['L','M','M','J','V','S','D'];
-  var today = new Date().getDay();
-  var todayIdx = today === 0 ? 6 : today - 1;
+  var today = new Date().getDay(); // 0=Sun
+  var todayIdx = today === 0 ? 6 : today - 1; // Mon=0 ... Sun=6
+
   var html = dayNames.map(function(d, i) {
-    return '<div class="streak-day' + (i < todayIdx ? ' done' : '') + (i === todayIdx ? ' today' : '') + '">' + d + '</div>';
+    // Calculate offset from today
+    var offset = i - todayIdx;
+    var dateStr = getDateKey(offset);
+    var status = offset > 0 ? 'future' : getDayHabitStatus(dateStr);
+    var isToday = i === todayIdx;
+
+    var extraClass = '';
+    var extraStyle = '';
+
+    if (isToday) {
+      extraStyle = 'border-color:var(--gold);color:var(--gold);font-weight:700;';
+      if (status === 'full') extraStyle = 'background:var(--forest);border-color:var(--forest);color:white;font-weight:700;';
+      else if (status === 'partial') extraStyle = 'background:rgba(166,122,24,0.15);border-color:var(--gold);color:var(--gold);font-weight:700;';
+    } else if (status === 'full') {
+      extraStyle = 'background:var(--forest);border-color:var(--forest);color:white;';
+    } else if (status === 'partial') {
+      extraStyle = 'background:linear-gradient(135deg,var(--forest) 50%,transparent 50%);border-color:var(--forest);color:white;';
+    } else if (status === 'future') {
+      extraStyle = 'opacity:0.3;';
+    }
+
+    return '<div class="streak-day" style="' + extraStyle + '">' + d + '</div>';
   }).join('');
+
   document.getElementById('streak-days').innerHTML = html;
+}
+
+function refreshStreak() {
+  initStreak();
 }
 
 // HABITUDES
 function toggleHabit(type) {
-  var today = new Date().toDateString();
-  var key = 'habit_' + type + '_' + today;
+  var now = new Date();
+  var dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  var key = 'habit_' + type + '_' + dateStr;
   var done = !localStorage.getItem(key);
   if (done) localStorage.setItem(key, '1'); else localStorage.removeItem(key);
   updateHabitUI(type, done);
+  refreshStreak();
   if (done) showToast('Habitude cochée !');
 }
 function updateHabitUI(type, done) {
@@ -593,9 +658,10 @@ function updateHabitUI(type, done) {
 }
 // Init habits
 (function() {
-  var today = new Date().toDateString();
+  var now = new Date();
+  var dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   ['priere','lecture'].forEach(function(type) {
-    updateHabitUI(type, !!localStorage.getItem('habit_' + type + '_' + today));
+    updateHabitUI(type, !!localStorage.getItem('habit_' + type + '_' + dateStr));
   });
 })();
 
