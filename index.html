@@ -3298,20 +3298,24 @@ function switchAuthTab(tab) {
 async function handleForgotPassword() {
   const email = document.getElementById('login-email').value.trim();
   const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
   if (!email) {
     errEl.textContent = 'Entre ton email d\'abord';
     errEl.style.display = 'block';
     return;
   }
-  const { error } = await db.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://sion-disciples.vercel.app'
-  });
-  if (error) {
-    errEl.textContent = 'Erreur, vérifie ton email';
-    errEl.style.display = 'block';
-  } else {
-    errEl.style.display = 'none';
-    showToast('Email de réinitialisation envoyé !');
+  showToast('Envoi en cours...');
+  try {
+    const { error } = await db.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://sion-disciples.vercel.app'
+    });
+    if (error) {
+      showToast('Erreur : ' + error.message);
+    } else {
+      showToast('Email envoyé ! Vérifie ta boîte mail.');
+    }
+  } catch(e) {
+    showToast('Erreur de connexion');
   }
 }
 
