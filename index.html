@@ -2383,6 +2383,14 @@ html, body {
 /* Scrollbar */
 ::-webkit-scrollbar { display: none; }
 </style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://nnablorsulsqumlpfcwb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_yizjtY1alJ6IaS_kqcECyw_sUAqHqzN';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let currentMembre = null;
+</script>
 </head>
 <body>
 
@@ -3025,6 +3033,38 @@ function saveData() {
 
 
 
+
+async function loadPrayers() {
+  if (!db) return;
+  const { data } = await db.from('prieres').select('*').eq('exauce', false).order('created_at', { ascending: false });
+  if (data && data.length > 0) {
+    prayers = data.map(p => ({
+      id: p.id,
+      name: p.prenom_affiche,
+      text: p.contenu,
+      date: new Date(p.created_at).getDate() + ' ' + ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'][new Date(p.created_at).getMonth()],
+      prayingCount: p.nombre_intercesseurs || 0,
+      iPrayed: false,
+      answered: p.exauce,
+      isOwn: currentMembre && p.membre_id === currentMembre.id,
+      dbId: p.id
+    }));
+    renderPrayerCards();
+    updatePrayerBadge();
+  }
+  
+  // Load testimonies
+  const { data: tData } = await db.from('prieres').select('*').eq('exauce', true).order('date_exaucement', { ascending: false });
+  if (tData && tData.length > 0) {
+    testimonies = tData.map(p => ({
+      name: p.prenom_affiche,
+      text: p.contenu,
+      date: 'Exaucé le ' + new Date(p.date_exaucement).getDate() + ' ' + ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'][new Date(p.date_exaucement).getMonth()],
+      prayingCount: p.nombre_intercesseurs || 0
+    }));
+  }
+}
+
 // ── MUR DE PRIÈRE ──
 let prayers = [];
 
@@ -3081,23 +3121,39 @@ function renderPrayerCards() {
   `).join('');
 }
 
-function togglePray(id) {
+async function togglePray(id) {
   const p = prayers.find(x => x.id === id);
   if (!p) return;
   p.iPrayed = !p.iPrayed;
   p.prayingCount += p.iPrayed ? 1 : -1;
+  
+  if (p.dbId) {
+    await db.from('prieres').update({ nombre_intercesseurs: p.prayingCount }).eq('id', p.dbId);
+  }
+  
   renderPrayerCards();
   showToast(p.iPrayed ? 'Tu intercèdes pour ' + p.name + ' 🙏' : 'Intercession retirée');
 }
 
-function markAnswered(id) {
+async function markAnswered(id) {
   const p = prayers.find(x => x.id === id);
   if (!p) return;
   p.answered = true;
+  
+  const now = new Date();
+  const months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+  
+  if (p.dbId) {
+    await db.from('prieres').update({
+      exauce: true,
+      date_exaucement: now.toISOString()
+    }).eq('id', p.dbId);
+  }
+  
   testimonies.unshift({
     name: p.name,
     text: p.text,
-    date: 'Exaucé le ' + new Date().getDate() + ' mai',
+    date: 'Exaucé le ' + now.getDate() + ' ' + months[now.getMonth()],
     prayingCount: p.prayingCount
   });
   renderPrayerCards();
@@ -3106,25 +3162,54 @@ function markAnswered(id) {
   showToast('Gloire à Dieu ! Témoignage ajouté ✨');
 }
 
-function submitPrayer() {
+async function submitPrayer() {
   const name = document.getElementById('prayer-name').value.trim();
   const text = document.getElementById('prayer-text').value.trim();
   if (!name) { showToast('Ajoute ton prénom'); return; }
   if (!text) { showToast('Écris ta demande'); return; }
-  prayers.unshift({
-    id: nextPrayerId++,
-    name, text,
-    date: new Date().getDate() + ' mai',
-    prayingCount: 0,
-    iPrayed: false,
-    answered: false,
-    isOwn: true
-  });
+  
+  const now = new Date();
+  const months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+  const dateStr = now.getDate() + ' ' + months[now.getMonth()];
+  
+  // Sauvegarder dans Supabase
+  if (currentMembre) {
+    const { data } = await db.from('prieres').insert({
+      membre_id: currentMembre.id,
+      prenom_affiche: name,
+      contenu: text,
+      nombre_intercesseurs: 0,
+      exauce: false
+    }).select().single();
+    
+    if (data) {
+      prayers.unshift({
+        id: data.id,
+        name, text,
+        date: dateStr,
+        prayingCount: 0,
+        iPrayed: false,
+        answered: false,
+        isOwn: true,
+        dbId: data.id
+      });
+    }
+  } else {
+    prayers.unshift({
+      id: nextPrayerId++,
+      name, text,
+      date: dateStr,
+      prayingCount: 0,
+      iPrayed: false,
+      answered: false,
+      isOwn: true
+    });
+  }
+  
   document.getElementById('prayer-name').value = '';
   document.getElementById('prayer-text').value = '';
   renderPrayerCards();
   updatePrayerBadge();
-  // Switch to requests tab
   document.querySelectorAll('.prayer-tab')[0].click();
   showToast('Demande déposée 🙏');
 }
@@ -3167,26 +3252,49 @@ let currentUser = { prenom: 'Olivier-Marie', nom: 'Lucenay', isAdmin: false };
 let logoTapCount = 0;
 let logoTapTimer = null;
 
-function initApp() {
-  const saved = sessionStorage.getItem('sion_user');
+async function initApp() {
+  const saved = localStorage.getItem('sion_user');
   if (saved) {
     currentUser = JSON.parse(saved);
+    // Charger le membre depuis Supabase
+    const { data } = await db.from('membres').select('*').eq('id', currentUser.id).single();
+    if (data) {
+      currentMembre = data;
+      currentUser = { ...currentUser, ...data };
+    }
     document.getElementById('onboarding-overlay').style.display = 'none';
     applyUserIdentity();
+    loadPrayers();
   } else {
     document.getElementById('onboarding-overlay').style.display = 'flex';
   }
 }
 
-function completeOnboarding() {
+async function completeOnboarding() {
   const prenom = document.getElementById('onboard-prenom').value.trim();
   const nom = document.getElementById('onboard-nom').value.trim();
   if (!prenom) { showToast('Entre ton prénom'); return; }
   if (!nom) { showToast('Entre ton nom'); return; }
-  currentUser = { prenom, nom, isAdmin: false };
-  sessionStorage.setItem('sion_user', JSON.stringify(currentUser));
+  
+  showToast('Création de ton compte...');
+  
+  // Créer le membre dans Supabase
+  const { data, error } = await db.from('membres').insert({
+    prenom, nom, role: 'membre'
+  }).select().single();
+  
+  if (error) {
+    showToast('Erreur de connexion, réessaie');
+    console.error(error);
+    return;
+  }
+  
+  currentMembre = data;
+  currentUser = { id: data.id, prenom, nom, isAdmin: false };
+  localStorage.setItem('sion_user', JSON.stringify(currentUser));
   document.getElementById('onboarding-overlay').style.display = 'none';
   applyUserIdentity();
+  showToast('Bienvenue, ' + prenom + ' !');
 }
 
 function applyUserIdentity() {
@@ -3195,7 +3303,7 @@ function applyUserIdentity() {
   if (greetingEl) {
     const hour = new Date().getHours();
     let salut = hour < 12 ? 'Bonjour,' : hour < 18 ? 'Bonne journée,' : hour < 22 ? 'Bonne soirée,' : 'Bonne nuit,';
-    greetingEl.innerHTML = salut + '<br><em>' + currentUser.prenom + ' ' + currentUser.nom + '.</em>';
+    greetingEl.innerHTML = salut + '<br><em>' + currentUser.prenom + '.</em>';
   }
   // Update avatar
   const avatar = document.querySelector('.header-avatar');
@@ -3224,7 +3332,7 @@ function checkPin() {
   const entered = document.getElementById('pin-input').value;
   if (entered === ADMIN_PIN) {
     currentUser.isAdmin = true;
-    sessionStorage.setItem('sion_user', JSON.stringify(currentUser));
+    localStorage.setItem('sion_user', JSON.stringify(currentUser));
     document.getElementById('pin-overlay').classList.remove('open');
     document.getElementById('pin-input').value = '';
     openAdmin();
@@ -3255,16 +3363,26 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── CARNET RETRAITE ──
 let retreatNotes = [];
 
-function saveRetreatNote() {
+async function saveRetreatNote() {
   const ta = document.getElementById('carnet-textarea');
   if (!ta || !ta.value.trim()) {
     showToast("Écris quelque chose d'abord");
     return;
   }
+  const texte = ta.value.trim();
+  
+  if (currentMembre) {
+    await db.from('notes_retraite').insert({
+      membre_id: currentMembre.id,
+      retraite_titre: 'Reviens à ton premier amour',
+      contenu: texte
+    });
+  }
+  
   const now = new Date();
   const months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
   const dateStr = now.getDate() + ' ' + months[now.getMonth()] + ' · ' + String(now.getHours()).padStart(2,'0') + 'h' + String(now.getMinutes()).padStart(2,'0');
-  retreatNotes.unshift({ date: dateStr, text: ta.value.trim() });
+  retreatNotes.unshift({ date: dateStr, text: texte });
   ta.value = '';
   renderRetreatNotes();
   showToast('Note sauvegardée ✓');
@@ -3837,16 +3955,29 @@ function deleteNote(i) {
   showToast('Note supprimée');
 }
 
-function saveNote() {
+async function saveNote() {
   const ta = document.querySelector('#notes-write .notes-free-textarea');
   if (!ta || !ta.value.trim()) {
     showToast("Écris quelque chose d'abord");
     return;
   }
+  const texte = ta.value.trim();
+  const verse = document.querySelector('.verse-ref') ? document.querySelector('.verse-ref').textContent : 'Romains 12,2';
+  
+  // Sauvegarder dans Supabase si connecté
+  if (currentMembre) {
+    await db.from('notes').insert({
+      membre_id: currentMembre.id,
+      type: 'note',
+      ref_verset: verse,
+      contenu: texte
+    });
+  }
+  
   const now = new Date();
   const months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
   const dateStr = now.getDate() + ' ' + months[now.getMonth()] + ' · Aujourd\'hui';
-  savedNotes.unshift({ date: dateStr, type: 'Note', ref: 'Romains 12,2', text: ta.value.trim() });
+  savedNotes.unshift({ date: dateStr, type: 'Note', ref: verse, text: texte });
   ta.value = '';
   ta.style.height = '160px';
   renderNotesHistory();
