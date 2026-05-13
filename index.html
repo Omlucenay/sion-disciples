@@ -2395,7 +2395,7 @@ html, body {
       <!-- Greeting -->
       <div class="greeting-block">
         <div class="greeting-day" id="greeting-day">Mercredi 13 mai</div>
-        <div class="greeting-name" id="greeting-text">Bonjour,<br><em>Olivier-Marie.</em></div>
+        <div class="greeting-name" id="greeting-text" id="greeting-text">Chargement...</div>
       </div>
 
       <!-- Streak + Semaine compacts -->
@@ -2647,7 +2647,7 @@ html, body {
 
       <div class="profil-header">
         <div class="profil-avatar-large">OM</div>
-        <div class="profil-name">Olivier-Marie</div>
+        <div class="profil-name" id="profil-name-display"></div>
         <div class="profil-role">Berger · SION</div>
       </div>
 
@@ -3383,7 +3383,7 @@ function applyUserIdentity() {
   if (avatar && currentUser.prenom && currentUser.nom) {
     avatar.textContent = (currentUser.prenom.charAt(0) + currentUser.nom.charAt(0)).toUpperCase();
   }
-  const profilName = document.querySelector('.profil-name');
+  const profilName = document.getElementById('profil-name-display');
   if (profilName) profilName.textContent = currentUser.prenom + ' ' + currentUser.nom;
   const profilRole = document.querySelector('.profil-role');
   if (profilRole) {
@@ -4165,9 +4165,7 @@ function updateGreeting() {
   else salut = 'Bonne nuit,';
 
   const greetingDay = document.getElementById('greeting-day');
-  const greetingText = document.getElementById('greeting-text');
-  if (greetingDay) greetingDay.textContent = dayLabel;
-  if (greetingText) greetingText.innerHTML = salut + '<br><em>Olivier-Marie.</em>';
+  // greeting updated by applyUserIdentity after login
 }
 updateTime();
 setInterval(updateTime, 30000);
