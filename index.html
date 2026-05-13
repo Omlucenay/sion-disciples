@@ -3306,6 +3306,7 @@ async function handleForgotPassword() {
   }
   showToast('Envoi en cours...');
   try {
+    if (!db) { showToast('Erreur : base non connectée'); return; }
     const { error } = await db.auth.resetPasswordForEmail(email, {
       redirectTo: 'https://sion-disciples.vercel.app'
     });
@@ -4206,7 +4207,7 @@ setInterval(updateTime, 30000);
 initDailyVerse();
 initZoom();
 initCulte();
-// initApp() called via DOMContentLoaded
+initApp();
 </script>
 </body>
 </html>
