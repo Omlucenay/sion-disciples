@@ -2823,6 +2823,7 @@ let currentMembre = null;
     <input class="onboarding-input" id="login-password" type="password" placeholder="Mot de passe" autocomplete="current-password" />
     <button class="onboarding-btn" onclick="handleLogin()">Se connecter</button>
     <div id="login-error" style="font-size:12px; color:#c05050; text-align:center; margin-top:4px; display:none;"></div>
+    <div onclick="handleForgotPassword()" style="font-size:13px; color:var(--forest-light); text-align:center; margin-top:12px; cursor:pointer; font-family:'Cormorant Garamond',serif; font-style:italic; text-decoration:underline;">Mot de passe oublié ?</div>
   </div>
 
   <!-- REGISTER FORM -->
@@ -3292,6 +3293,26 @@ function switchAuthTab(tab) {
   document.getElementById('tab-register').style.cssText = isLogin
     ? 'flex:1;text-align:center;padding:10px;border-radius:9px;font-family:"Barlow Condensed",sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;color:rgba(30,61,47,0.5);transition:all 0.2s;'
     : 'flex:1;text-align:center;padding:10px;border-radius:9px;font-family:"Barlow Condensed",sans-serif;font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;background:var(--forest);color:white;transition:all 0.2s;';
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
+  if (!email) {
+    errEl.textContent = 'Entre ton email d\'abord';
+    errEl.style.display = 'block';
+    return;
+  }
+  const { error } = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://sion-disciples.vercel.app'
+  });
+  if (error) {
+    errEl.textContent = 'Erreur, vérifie ton email';
+    errEl.style.display = 'block';
+  } else {
+    errEl.style.display = 'none';
+    showToast('Email de réinitialisation envoyé !');
+  }
 }
 
 async function handleLogin() {
