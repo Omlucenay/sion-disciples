@@ -362,7 +362,7 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
       <div class="admin-section">Jours sans zoom</div>
       <div style="display:flex;gap:8px;margin-bottom:8px;"><input class="admin-input" id="zoom-off-date" type="date" style="flex:1;margin:0;" /><button class="admin-add-btn" onclick="addOffDay()">Ajouter</button></div>
       <div class="admin-section">Dates de culte</div>
-      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;"><input class="admin-input" id="culte-date" type="date" style="flex:1;min-width:110px;margin:0;" /><input class="admin-input" id="culte-heure" type="time" value="10:00" style="flex:1;min-width:80px;margin:0;" /><input class="admin-input" id="culte-note" placeholder="Note (ex: Baptêmes à 8h30)" style="flex:2;min-width:150px;margin:0;" /><button class="admin-add-btn" onclick="addCulteDate()">+</button></div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;"><input class="admin-input" id="culte-date" type="date" style="flex:1;min-width:110px;margin:0;" /><input class="admin-input" id="culte-heure" type="time" value="10:00" style="flex:1;min-width:80px;margin:0;" /><input class="admin-input" id="culte-note" placeholder="Note (ex: Baptêmes à 8h30)" style="flex:2;min-width:150px;margin:0;" /><button class="admin-add-btn" onclick="addCulteDate()">+</button></div><div id="admin-culte-list" style="margin-bottom:12px;"></div>
       <div id="admin-membres-section" style="display:none;">
         <div class="admin-section">Membres</div>
         <div id="admin-membres-list"></div>
@@ -448,6 +448,7 @@ const VERSES = [
 window.addEventListener('load', function() {
   try { db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error('Supabase:', e); showAuth(); return; }
   initUI();
+  // initCulte called after db ready
   db.auth.getSession().then(function(r) {
     if (r.data && r.data.session) { onAuthSuccess(r.data.session.user); }
     else { showAuth(); }
@@ -514,6 +515,7 @@ async function onAuthSuccess(user) {
   currentMembre = r.data; currentUser = r.data;
   hideAuth();
   applyUserIdentity();
+  initCulte();
   loadPrayers();
   showToast('Bon retour, ' + r.data.prenom + ' !');
 }
@@ -610,20 +612,19 @@ function initZoom() {
 
 // CULTE
 var culteDates = [{date:'2026-05-31',heure:'10:00',note:'Culte + Sainte Cène'},{date:'2026-06-14',heure:'10:00',note:'Culte de clôture retraite'},{date:'2026-06-28',heure:'10:00',note:'Culte + Témoignages'}];
-function initCulte() {
+function renderCulteCard(data) {
   var now = new Date();
-  // Parse date with local timezone (Martinique UTC-4)
-  // Use date string + T00:00 to avoid UTC conversion
-  var upcoming = culteDates.filter(function(c) {
+  var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var upcoming = data.filter(function(c) {
     var parts = c.date.split('-');
     var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-    return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return d >= today;
   });
   if (!upcoming.length) return;
   var next = upcoming[0];
   var parts = next.date.split('-');
   var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-  var diff = Math.round((d - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+  var diff = Math.round((d - today) / 86400000);
   var months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
   var nameEl = document.getElementById('culte-name');
   var subEl = document.getElementById('culte-sub');
@@ -633,6 +634,20 @@ function initCulte() {
     var diffStr = diff === 0 ? "Aujourd'hui" : diff === 1 ? 'Demain' : 'Dans ' + diff + ' jours';
     subEl.textContent = diffStr + (next.note ? ', ' + next.note : '');
   }
+}
+
+async function initCulte() {
+  // Load from Supabase
+  if (db) {
+    var r = await db.from('cultes').select('*').order('date');
+    if (r.data && r.data.length) {
+      culteDates = r.data;
+      renderCulteCard(culteDates);
+      return;
+    }
+  }
+  // Fallback to local data
+  renderCulteCard(culteDates);
 }
 
 // VERSET
@@ -849,6 +864,7 @@ async function openAdmin() {
   document.getElementById('admin-role-label').textContent = role === 'berger' ? 'Mode berger' : 'Mode noyau';
   var membresSection = document.getElementById('admin-membres-section');
   if (membresSection) membresSection.style.display = role === 'berger' ? 'block' : 'none';
+  renderAdminCulteDates();
   if (role === 'berger') loadAdminMembres();
 }
 async function loadAdminMembres() {
@@ -870,14 +886,53 @@ async function updateMemberRole(id, role) {
   showToast('Rôle mis à jour');
 }
 function addOffDay() { showToast('Date zoom off ajoutée'); }
-function addCulteDate() {
+async function addCulteDate() {
   var d = document.getElementById('culte-date').value;
   var h = document.getElementById('culte-heure') ? document.getElementById('culte-heure').value : '10:00';
   var n = document.getElementById('culte-note').value;
-  if (!d) return;
+  if (!d) { showToast('Choisis une date'); return; }
+  if (db) {
+    var r = await db.from('cultes').insert({ date: d, heure: h, note: n }).select().single();
+    if (r.data) {
+      culteDates.push(r.data);
+      culteDates.sort(function(a,b) { return a.date.localeCompare(b.date); });
+      renderCulteCard(culteDates);
+      renderAdminCulteDates();
+      document.getElementById('culte-date').value = '';
+      document.getElementById('culte-note').value = '';
+      showToast('Date de culte ajoutée');
+      return;
+    }
+  }
   culteDates.push({ date: d, heure: h, note: n });
   culteDates.sort(function(a,b) { return a.date.localeCompare(b.date); });
-  initCulte(); showToast('Date de culte ajoutée');
+  renderCulteCard(culteDates);
+  renderAdminCulteDates();
+  showToast('Date de culte ajoutée');
+}
+
+function renderAdminCulteDates() {
+  var existing = document.getElementById('admin-culte-list');
+  if (!existing) return;
+  var months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+  existing.innerHTML = culteDates.map(function(c) {
+    var parts = c.date.split('-');
+    var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+      '<span style="font-size:13px;color:var(--forest);flex:1;">' + d.getDate() + ' ' + months[d.getMonth()] + (c.heure ? ' à ' + c.heure : '') + (c.note ? ', ' + c.note : '') + '</span>' +
+      '<span onclick="deleteCulteDate(' + JSON.stringify(c.id || '') + ',' + JSON.stringify(c.date) + ')" style="font-size:18px;cursor:pointer;color:var(--text-dim);">×</span>' +
+    '</div>';
+  }).join('') || '<div style="font-size:13px;color:var(--text-dim);">Aucune date</div>';
+}
+
+async function deleteCulteDate(id, date) {
+  if (db && id) {
+    await db.from('cultes').delete().eq('id', id);
+  }
+  culteDates = culteDates.filter(function(c) { return c.date !== date; });
+  renderCulteCard(culteDates);
+  renderAdminCulteDates();
+  showToast('Date supprimée');
 }
 function saveAdmin() { document.getElementById('admin-overlay').classList.remove('open'); showToast('Sauvegardé'); }
 
