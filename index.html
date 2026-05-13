@@ -915,25 +915,30 @@ function renderAdminCulteDates() {
   var existing = document.getElementById('admin-culte-list');
   if (!existing) return;
   var months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
-  existing.innerHTML = culteDates.map(function(c) {
+  if (!culteDates.length) { existing.innerHTML = '<div style="font-size:13px;color:var(--text-dim);padding:8px 0;">Aucune date</div>'; return; }
+  existing.innerHTML = culteDates.map(function(c, idx) {
     var parts = c.date.split('-');
     var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
-      '<span style="font-size:13px;color:var(--forest);flex:1;">' + d.getDate() + ' ' + months[d.getMonth()] + (c.heure ? ' à ' + c.heure : '') + (c.note ? ', ' + c.note : '') + '</span>' +
-      '<span onclick="deleteCulteDate(' + JSON.stringify(c.id || '') + ',' + JSON.stringify(c.date) + ')" style="font-size:18px;cursor:pointer;color:var(--text-dim);">×</span>' +
+    var label = d.getDate() + ' ' + months[d.getMonth()] + (c.heure ? ' à ' + c.heure : '') + (c.note ? ', ' + c.note : '');
+    return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">' +
+      '<span style="font-size:13px;color:var(--forest);flex:1;line-height:1.4;">' + label + '</span>' +
+      '<button onclick="deleteCulteDate(' + idx + ')" style="min-width:36px;min-height:36px;background:rgba(180,60,60,0.08);border:1px solid rgba(180,60,60,0.2);border-radius:8px;color:#c05050;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>' +
     '</div>';
-  }).join('') || '<div style="font-size:13px;color:var(--text-dim);">Aucune date</div>';
+  }).join('');
 }
 
-async function deleteCulteDate(id, date) {
-  if (db && id) {
-    await db.from('cultes').delete().eq('id', id);
+async function deleteCulteDate(idx) {
+  var c = culteDates[idx];
+  if (!c) return;
+  if (db && c.id) {
+    await db.from('cultes').delete().eq('id', c.id);
   }
-  culteDates = culteDates.filter(function(c) { return c.date !== date; });
+  culteDates.splice(idx, 1);
   renderCulteCard(culteDates);
   renderAdminCulteDates();
   showToast('Date supprimée');
 }
+
 function saveAdmin() { document.getElementById('admin-overlay').classList.remove('open'); showToast('Sauvegardé'); }
 
 // MODALS
