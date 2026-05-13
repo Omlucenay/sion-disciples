@@ -1593,7 +1593,7 @@ html, body {
   inset: 0;
   background: #F4F0E8;
   z-index: 500;
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -3342,7 +3342,8 @@ async function onAuthSuccess(user) {
     isAdmin: data.role === 'berger'
   };
   localStorage.setItem('sion_user', JSON.stringify(currentUser));
-  document.getElementById('onboarding-overlay').style.display = 'none';
+  const overlay = document.getElementById('onboarding-overlay');
+  if (overlay) overlay.style.display = 'none';
   applyUserIdentity();
   applyRoleInterface();
   await loadPrayers();
@@ -3351,10 +3352,15 @@ async function onAuthSuccess(user) {
 
 async function initApp() {
   // Check existing Supabase session
-  const { data: { session } } = await db.auth.getSession();
-  if (session) {
-    await onAuthSuccess(session.user);
-  } else {
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if (session) {
+      await onAuthSuccess(session.user);
+    } else {
+      document.getElementById('onboarding-overlay').style.display = 'flex';
+    }
+  } catch(e) {
+    console.error('initApp error:', e);
     document.getElementById('onboarding-overlay').style.display = 'flex';
   }
 }
