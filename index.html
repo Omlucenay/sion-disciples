@@ -208,15 +208,15 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
         <div class="habit-info"><div class="habit-name">Lecture de la Parole</div><div class="habit-sub" id="sub-lecture">Pas encore fait</div></div>
         <span>🔥</span>
       </div>
-      <div class="habit-card" id="habit-zoom">
-        <div class="habit-check"></div>
+      <div class="habit-card" id="habit-zoom" onclick="toggleHabit('zoom')">
+        <div class="habit-check" id="check-zoom"></div>
         <div class="habit-info"><div class="habit-name" id="zoom-name">Zoom ce soir !</div><div class="habit-sub" id="zoom-sub">Mercredi, 19h30</div></div>
-        <button class="habit-action" onclick="window.open('https://us06web.zoom.us/j/81985905957','_blank')">Rejoindre</button>
+        <button class="habit-action" onclick="event.stopPropagation();window.open('https://us06web.zoom.us/j/81985905957','_blank')">Rejoindre</button>
       </div>
-      <div class="habit-card" id="habit-culte">
-        <div class="habit-check"></div>
+      <div class="habit-card" id="habit-culte" onclick="toggleHabit('culte')">
+        <div class="habit-check" id="check-culte"></div>
         <div class="habit-info"><div class="habit-name" id="culte-name">Prochain culte</div><div class="habit-sub" id="culte-sub">À venir</div></div>
-        <button class="habit-action" onclick="window.open('https://maps.google.com/?q=14.585051,-60.974373','_blank')">Localiser</button>
+        <button class="habit-action" onclick="event.stopPropagation();window.open('https://maps.google.com/?q=14.585051,-60.974373','_blank')">Localiser</button>
       </div>
       <div class="prayer-btn-card" onclick="openPrayer()">
         <span style="font-size:24px;">🙏</span>
@@ -566,11 +566,15 @@ function getDateKey(offsetDays) {
 
 function getDayHabitStatus(dateStr) {
   // Returns: 'full' | 'partial' | 'none'
+  // Count only priere + lecture for streak (core disciplines)
   var priere = localStorage.getItem('habit_priere_' + dateStr);
   var lecture = localStorage.getItem('habit_lecture_' + dateStr);
-  var count = (priere ? 1 : 0) + (lecture ? 1 : 0);
-  if (count === 2) return 'full';
-  if (count === 1) return 'partial';
+  var zoom = localStorage.getItem('habit_zoom_' + dateStr);
+  var culte = localStorage.getItem('habit_culte_' + dateStr);
+  var core = (priere ? 1 : 0) + (lecture ? 1 : 0);
+  var bonus = (zoom ? 1 : 0) + (culte ? 1 : 0);
+  if (core === 2) return 'full';
+  if (core === 1 || bonus > 0) return 'partial';
   return 'none';
 }
 
@@ -651,7 +655,7 @@ function updateHabitUI(type, done) {
   card.classList.toggle('done', done);
   check.innerHTML = done ? '<span style="color:white;font-size:14px;">✓</span>' : '';
   var sub = document.getElementById('sub-' + type);
-  if (sub) {
+  if (sub && (type === 'priere' || type === 'lecture')) {
     var now = new Date();
     sub.textContent = done ? 'Complété, ' + now.getHours() + 'h' + String(now.getMinutes()).padStart(2,'0') : 'Pas encore fait';
   }
@@ -660,7 +664,7 @@ function updateHabitUI(type, done) {
 (function() {
   var now = new Date();
   var dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-  ['priere','lecture'].forEach(function(type) {
+  ['priere','lecture','zoom','culte'].forEach(function(type) {
     updateHabitUI(type, !!localStorage.getItem('habit_' + type + '_' + dateStr));
   });
 })();
