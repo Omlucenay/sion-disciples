@@ -134,10 +134,10 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
 .day-review-sheet {
   position:fixed; bottom:0; left:50%; transform:translateX(-50%);
   width:100%; max-width:420px; background:var(--parchment);
-  border-radius:24px 24px 0 0; padding:20px 24px 48px;
+  border-radius:24px 24px 0 0; padding:20px 24px 80px;
   z-index:300; animation:slideUp 0.3s ease;
   box-shadow:0 -8px 40px rgba(30,61,47,0.2);
-  display:none;
+  display:none; max-height:70vh; overflow-y:auto;
 }
 .day-review-sheet.open { display:block; }
 .day-review-overlay { position:fixed; inset:0; background:rgba(30,61,47,0.4); z-index:299; display:none; backdrop-filter:blur(3px); }
@@ -145,7 +145,7 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
 .day-review-handle { width:40px; height:4px; background:rgba(30,61,47,0.15); border-radius:2px; margin:0 auto 16px; }
 .day-review-title { font-family:"Cormorant Garamond",serif; font-size:20px; font-weight:700; color:var(--forest); margin-bottom:4px; }
 .day-review-verse { font-family:"Cormorant Garamond",serif; font-size:13px; font-style:italic; color:var(--text-dim); margin-bottom:16px; line-height:1.5; }
-.day-review-habit { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+.day-review-habit { display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); cursor:pointer; -webkit-tap-highlight-color:rgba(61,122,92,0.1); user-select:none; }
 .day-review-check { width:24px; height:24px; border-radius:50%; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .day-review-check.done { background:var(--forest-light); border-color:var(--forest-light); }
 .day-review-habit-name { font-size:14px; font-weight:600; color:var(--forest); }
@@ -430,7 +430,7 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
     <div class="modal-sub">Scripture, Observation, Application, Prayer</div>
     <div class="modal-scroll">
       <div class="soap-progress"><div class="soap-dot" id="sd0"></div><div class="soap-dot" id="sd1"></div><div class="soap-dot" id="sd2"></div><div class="soap-dot" id="sd3"></div></div>
-      <div id="soap-step-0" class="soap-step active"><div class="soap-step-label">S, Scripture</div><div class="soap-step-title">Quel verset retiens-tu ?</div><textarea class="soap-textarea" id="soap-s" placeholder="Écris le verset qui te parle..."></textarea><div class="soap-nav"><button class="soap-nav-btn primary" onclick="nextSoap()">Suivant</button></div></div>
+      <div id="soap-step-0" class="soap-step active"><div class="soap-step-label">S, Scripture</div><div class="soap-step-title">Quelle partie t'interpelle ?</div><textarea class="soap-textarea" id="soap-s" placeholder="Écris le verset qui te parle..."></textarea><div class="soap-nav"><button class="soap-nav-btn primary" onclick="nextSoap()">Suivant</button></div></div>
       <div id="soap-step-1" class="soap-step"><div class="soap-step-label">O, Observation</div><div class="soap-step-title">Qu'est-ce que ce texte dit ?</div><textarea class="soap-textarea" id="soap-o" placeholder="Ce que tu observes..."></textarea><div class="soap-nav"><button class="soap-nav-btn" onclick="prevSoap()">Retour</button><button class="soap-nav-btn primary" onclick="nextSoap()">Suivant</button></div></div>
       <div id="soap-step-2" class="soap-step"><div class="soap-step-label">A, Application</div><div class="soap-step-title">Comment l'appliquer ?</div><textarea class="soap-textarea" id="soap-a" placeholder="Ce que tu vas mettre en pratique..."></textarea><div class="soap-nav"><button class="soap-nav-btn" onclick="prevSoap()">Retour</button><button class="soap-nav-btn primary" onclick="nextSoap()">Suivant</button></div></div>
       <div id="soap-step-3" class="soap-step"><div class="soap-step-label">P, Prayer</div><div class="soap-step-title">Ta prière en réponse</div><textarea class="soap-textarea" id="soap-p" placeholder="Prie à partir de ce que tu as reçu..."></textarea><div class="soap-nav"><button class="soap-nav-btn" onclick="prevSoap()">Retour</button><button class="soap-nav-btn primary" onclick="saveSoap()">Terminer</button></div></div>
@@ -1040,15 +1040,15 @@ var soapFromCarnet = false;
 function openSoap(fromCarnet) {
   soapFromCarnet = !!fromCarnet;
   soapStep = 0;
-  // Reset fields
+  // Reset ALL fields including reference
   ['soap-s','soap-o','soap-a','soap-p'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
   var refInput = document.getElementById('soap-ref-input');
+  if (refInput) refInput.value = ''; // Always reset reference field
   if (fromCarnet) {
-    // Show reference input for standalone mode
     document.getElementById('soap-ref-title').textContent = 'Méditation SOAP';
     if (refInput) refInput.style.display = 'block';
+    if (refInput) refInput.placeholder = 'Référence du passage (ex: Jean 3,16)';
   } else {
-    // Use today verse
     document.getElementById('soap-ref-title').textContent = (todayVerse ? todayVerse.ref : '') + ', Méditation';
     if (refInput) refInput.style.display = 'none';
   }
@@ -1282,9 +1282,9 @@ function renderCarnetNotes() {
   list.innerHTML = filtered.map(function(n) {
     var idx = carnetNotes.indexOf(n);
     return '<div class="carnet-note-item" id="carnet-item-' + n.id + '">' +
-      '<div style="position:absolute;top:10px;right:10px;display:flex;gap:6px;">' +
-        '<button onclick="editCarnetNote(' + n.id + ')" style="width:28px;height:28px;border-radius:50%;background:rgba(61,122,92,0.08);border:1px solid rgba(61,122,92,0.2);color:var(--forest-light);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✏️</button>' +
-        '<button class="carnet-note-delete" onclick="deleteCarnetNote(' + n.id + ')">×</button>' +
+      '<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;">' +
+        '<button onclick="editCarnetNote(' + n.id + ')" style="min-width:32px;min-height:32px;border-radius:8px;background:rgba(61,122,92,0.08);border:1px solid rgba(61,122,92,0.2);color:var(--forest-light);font-size:14px;cursor:pointer;padding:4px 8px;">✏️</button>' +
+        '<button onclick="deleteCarnetNote(' + n.id + ')" style="min-width:32px;min-height:32px;border-radius:8px;background:rgba(180,60,60,0.08);border:1px solid rgba(180,60,60,0.2);color:#c05050;font-size:16px;cursor:pointer;padding:4px 8px;">×</button>' +
       '</div>' +
       '<span class="carnet-note-cat ' + (catColors[n.cat] || '') + '">' + (catLabels[n.cat] || n.cat) + '</span>' +
       '<div class="carnet-note-text" id="carnet-text-' + n.id + '">' + n.text + '</div>' +
