@@ -993,25 +993,32 @@ async function loadAdminMembres() {
   var list = document.getElementById('admin-membres-list');
   if (!list) return;
   if (!r.data || !r.data.length) { list.innerHTML = '<div style="font-size:13px;color:var(--text-dim);padding:8px 0;">Aucun membre inscrit</div>'; return; }
-  list.innerHTML = r.data.map(function(m) {
-    return '<div class="admin-member"><div style="flex:1;"><div class="admin-member-name">' + m.prenom + ' ' + m.nom + '</div><div class="admin-member-role">' + m.role + '</div></div>' +
-    '<select class="role-select" onchange="updateMemberRole(' + JSON.stringify(m.id) + ',this.value)">' +
+  // Store membres data globally for role updates
+  window._adminMembres = r.data;
+  list.innerHTML = r.data.map(function(m, idx) {
+    return '<div class="admin-member"><div style="flex:1;"><div class="admin-member-name">' + m.prenom + ' ' + m.nom + '</div><div class="admin-member-role" id="role-label-' + idx + '">' + m.role + '</div></div>' +
+    '<select class="role-select" onchange="updateMemberRole(' + idx + ',this.value)">' +
       '<option value="membre"' + (m.role==='membre'?' selected':'') + '>Membre</option>' +
       '<option value="noyau"' + (m.role==='noyau'?' selected':'') + '>Noyau</option>' +
       '<option value="berger"' + (m.role==='berger'?' selected':'') + '>Berger</option>' +
     '</select></div>';
   }).join('');
 }
-async function updateMemberRole(id, role) {
+async function updateMemberRole(idx, role) {
   if (!db) { showToast('Erreur : base non connectée'); return; }
-  var r = await db.from('membres').update({ role: role }).eq('id', id);
+  var membre = window._adminMembres && window._adminMembres[idx];
+  if (!membre) { showToast('Membre introuvable'); return; }
+  var memberId = membre.id;
+  var r = await db.from('membres').update({ role: role }).eq('id', memberId);
   if (r.error) {
     showToast('Erreur : ' + r.error.message);
     console.error('updateMemberRole error:', r.error);
   } else {
+    // Update local data
+    if (window._adminMembres) window._adminMembres[idx].role = role;
+    var label = document.getElementById('role-label-' + idx);
+    if (label) label.textContent = role;
     showToast('Rôle mis à jour ✓');
-    // Refresh list to confirm
-    setTimeout(loadAdminMembres, 500);
   }
 }
 function addOffDay() { showToast('Date zoom off ajoutée'); }
