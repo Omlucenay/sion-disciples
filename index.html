@@ -835,31 +835,39 @@ function renderPrayerCards() {
   var active = prayers.filter(function(p) { return !p.answered; });
   if (!active.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
   empty.style.display = 'none';
-  list.innerHTML = active.map(function(p) {
+  list.innerHTML = active.map(function(p, idx) {
     return '<div class="prayer-card">' +
       '<div class="prayer-card-header"><span class="prayer-card-name">' + p.name + '</span><span class="prayer-card-date">' + p.date + '</span></div>' +
       '<div class="prayer-card-text">' + p.text + '</div>' +
       '<div class="prayer-card-actions">' +
-        '<div class="pray-btn' + (p.iPrayed ? ' active' : '') + '" onclick="togglePray(' + JSON.stringify(p.id) + ')">🙏 ' + (p.iPrayed ? 'Je prie' : 'Prier') + '</div>' +
-        (p.isOwn ? '<div class="answered-btn" onclick="markAnswered(' + JSON.stringify(p.id) + ')">Exaucé</div>' : '') +
+        '<div class="pray-btn' + (p.iPrayed ? ' active' : '') + '" onclick="togglePray(' + idx + ')">🙏 ' + (p.iPrayed ? 'Je prie' : 'Prier') + '</div>' +
+        (p.isOwn ? '<div class="answered-btn" onclick="markAnswered(' + idx + ')">Exaucé</div>' : '') +
         '<span class="prayer-count-txt">' + p.prayingCount + ' ' + (p.prayingCount !== 1 ? 'prient' : 'prie') + '</span>' +
       '</div></div>';
   }).join('');
 }
-async function togglePray(id) {
-  var p = prayers.find(function(x) { return x.id === id; });
+async function togglePray(idx) {
+  var active = prayers.filter(function(p) { return !p.answered; });
+  var p = active[idx];
   if (!p) return;
-  p.iPrayed = !p.iPrayed; p.prayingCount += p.iPrayed ? 1 : -1;
-  await db.from('prieres').update({ nombre_intercesseurs: p.prayingCount }).eq('id', id);
+  p.iPrayed = !p.iPrayed;
+  p.prayingCount += p.iPrayed ? 1 : -1;
   renderPrayerCards();
   showToast(p.iPrayed ? 'Tu intercèdes pour ' + p.name + ' 🙏' : 'Intercession retirée');
+  if (db && p.id) {
+    var r = await db.from('prieres').update({ nombre_intercesseurs: p.prayingCount }).eq('id', p.id);
+    if (r.error) console.error('togglePray error:', r.error);
+  }
 }
-async function markAnswered(id) {
-  var p = prayers.find(function(x) { return x.id === id; });
+async function markAnswered(idx) {
+  var active = prayers.filter(function(p) { return !p.answered; });
+  var p = active[idx];
   if (!p) return;
-  await db.from('prieres').update({ exauce: true, date_exaucement: new Date().toISOString() }).eq('id', id);
   p.answered = true;
   var now = new Date(); var months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+  if (db && p.id) {
+    await db.from('prieres').update({ exauce: true, date_exaucement: now.toISOString() }).eq('id', p.id);
+  }
   testimonies.unshift({ name: p.name, text: p.text, date: 'Exaucé le ' + now.getDate() + ' ' + months[now.getMonth()], prayingCount: p.prayingCount });
   renderPrayerCards(); renderTestimonies(); updatePrayerBadge(); showToast('Gloire à Dieu ! ✨');
 }
