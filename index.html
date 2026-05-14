@@ -27,6 +27,7 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
 .content::-webkit-scrollbar { display:none; }
 .screen { display:none; padding-bottom:24px; }
 .screen.active { display:block; animation:fadeIn 0.25s ease; }
+#screen-carnet { padding-bottom:0; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 .bottom-nav { height:68px; background:#1E3D2F; display:flex; align-items:center; justify-content:space-around; padding:0 8px; flex-shrink:0; z-index:10; }
 .nav-tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:8px 4px; cursor:pointer; opacity:0.5; transition:opacity 0.2s; }
@@ -323,7 +324,7 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
 
 
     <!-- ══ CARNET ══ -->
-    <div class="screen" id="screen-carnet">
+    <div class="screen" id="screen-carnet" style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
       <!-- SOAP standalone -->
       <div class="soap-standalone" onclick="openSoap(true)" style="margin-top:16px;">
         <span style="font-size:22px;">✏️</span>
@@ -362,7 +363,7 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
       </div>
 
       <!-- Liste des notes -->
-      <div class="carnet-list" id="carnet-notes-list">
+      <div class="carnet-list" id="carnet-notes-list" style="flex:1;overflow-y:auto;padding:0 16px 24px;-webkit-overflow-scrolling:touch;">
         <div class="empty-msg">Tes notes apparaîtront ici.</div>
       </div>
     </div>
@@ -1283,8 +1284,8 @@ function renderCarnetNotes() {
     var idx = carnetNotes.indexOf(n);
     return '<div class="carnet-note-item" id="carnet-item-' + n.id + '">' +
       '<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;">' +
-        '<button onclick="editCarnetNote(' + n.id + ')" style="min-width:32px;min-height:32px;border-radius:8px;background:rgba(61,122,92,0.08);border:1px solid rgba(61,122,92,0.2);color:var(--forest-light);font-size:14px;cursor:pointer;padding:4px 8px;">✏️</button>' +
-        '<button onclick="deleteCarnetNote(' + n.id + ')" style="min-width:32px;min-height:32px;border-radius:8px;background:rgba(180,60,60,0.08);border:1px solid rgba(180,60,60,0.2);color:#c05050;font-size:16px;cursor:pointer;padding:4px 8px;">×</button>' +
+        '<button data-edit-id="' + n.id + '" style="min-width:44px;min-height:44px;border-radius:8px;background:rgba(61,122,92,0.08);border:1px solid rgba(61,122,92,0.2);color:var(--forest-light);font-size:16px;cursor:pointer;padding:4px 8px;">✏️</button>' +
+        '<button data-delete-id="' + n.id + '" style="min-width:44px;min-height:44px;border-radius:8px;background:rgba(180,60,60,0.08);border:1px solid rgba(180,60,60,0.2);color:#c05050;font-size:16px;cursor:pointer;padding:4px 8px;">×</button>' +
       '</div>' +
       '<span class="carnet-note-cat ' + (catColors[n.cat] || '') + '">' + (catLabels[n.cat] || n.cat) + '</span>' +
       '<div class="carnet-note-text" id="carnet-text-' + n.id + '">' + n.text + '</div>' +
@@ -1316,8 +1317,22 @@ function saveCarnetEdit(id) {
   showToast('Note modifiée');
 }
 
-// Init carnet
-(function() { renderCarnetNotes(); })();
+// Init carnet with event delegation
+(function() {
+  renderCarnetNotes();
+  document.addEventListener('click', function(e) {
+    var editBtn = e.target.closest('[data-edit-id]');
+    var deleteBtn = e.target.closest('[data-delete-id]');
+    if (editBtn) {
+      e.stopPropagation();
+      editCarnetNote(parseInt(editBtn.getAttribute('data-edit-id')));
+    }
+    if (deleteBtn) {
+      e.stopPropagation();
+      deleteCarnetNote(parseInt(deleteBtn.getAttribute('data-delete-id')));
+    }
+  });
+})();
 
 async function loadAdminPrayers() {
   if (!db) return;
