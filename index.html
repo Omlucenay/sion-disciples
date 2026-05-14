@@ -107,6 +107,28 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
 .profil-option-sub { font-size:11px; color:var(--text-dim); margin-top:2px; }
 .profil-arrow { margin-left:auto; color:var(--text-dim); font-size:18px; }
 /* MODALS */
+
+/* ─── CARNET ─── */
+.carnet-cats { display:flex; gap:6px; padding:16px 16px 8px; overflow-x:auto; flex-shrink:0; }
+.carnet-cats::-webkit-scrollbar { display:none; }
+.carnet-cat { padding:7px 14px; border-radius:100px; border:1.5px solid var(--border); background:white; font-family:"Barlow Condensed",sans-serif; font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim); cursor:pointer; white-space:nowrap; transition:all 0.2s; flex-shrink:0; }
+.carnet-cat.active { background:var(--forest); border-color:var(--forest); color:white; }
+.carnet-new { margin:0 16px 12px; }
+.carnet-new-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.carnet-new-cat-select { background:var(--parchment); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-family:"Barlow Condensed",sans-serif; font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--forest); outline:none; cursor:pointer; }
+.carnet-list { padding:0 16px 24px; }
+.carnet-note-item { background:white; border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:10px; position:relative; }
+.carnet-note-cat { display:inline-block; font-family:"Barlow Condensed",sans-serif; font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:3px 10px; border-radius:100px; margin-bottom:8px; }
+.carnet-note-cat.zoom { background:rgba(61,122,92,0.1); color:var(--forest-light); }
+.carnet-note-cat.enseignement { background:rgba(166,122,24,0.12); color:var(--gold); }
+.carnet-note-cat.meditation { background:rgba(30,61,47,0.08); color:var(--forest); }
+.carnet-note-cat.priere { background:rgba(100,80,160,0.1); color:#6450A0; }
+.carnet-note-cat.idees { background:rgba(60,120,180,0.1); color:#3C78B4; }
+.carnet-note-text { font-family:"Cormorant Garamond",serif; font-size:15px; font-style:italic; color:var(--forest); line-height:1.65; }
+.carnet-note-date { font-size:10px; color:var(--text-dim); margin-top:8px; }
+.carnet-note-delete { position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:50%; background:rgba(180,60,60,0.08); border:1px solid rgba(180,60,60,0.2); color:#c05050; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.soap-standalone { margin:0 16px 12px; background:linear-gradient(135deg,#1E3D2F,#2A5240); border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; }
+
 .modal-overlay { position:fixed; inset:0; background:rgba(30,61,47,0.45); z-index:200; display:none; align-items:flex-end; backdrop-filter:blur(4px); }
 .modal-overlay.open { display:flex; }
 .modal-sheet { width:100%; max-width:420px; margin:0 auto; background:var(--parchment); border-radius:24px 24px 0 0; padding:20px 0 48px; max-height:90vh; display:flex; flex-direction:column; animation:slideUp 0.3s ease; }
@@ -249,9 +271,12 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
         <span style="font-size:22px;">📖</span>
         <div style="color:white;"><div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Plan de lecture YouVersion</div><div style="font-size:11px;opacity:0.7;margin-top:2px;">Ouvrir dans la Bible App</div></div>
       </div>
-      <div class="card">
-        <div class="verse-label" style="margin-bottom:10px;"><span class="verse-label-text">Verset du jour</span><span class="verse-ref" id="verse-ref-2">...</span></div>
-        <div class="verse-text" id="verse-text-2">...</div>
+      <div style="margin:0 16px 12px;padding:12px 16px;background:rgba(61,122,92,0.05);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:16px;">📜</span>
+        <div>
+          <div style="font-size:10px;font-family:'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:2px;">Verset du jour</div>
+          <div style="font-size:12px;color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-weight:700;" id="verse-ref-2">...</div>
+        </div>
       </div>
       <div class="section-label">Mes notes d'étude</div>
       <div class="card">
@@ -275,10 +300,57 @@ html, body { height:100%; width:100%; font-family:'Barlow',sans-serif; backgroun
     </div>
   </div>
 
+
+    <!-- ══ CARNET ══ -->
+    <div class="screen" id="screen-carnet">
+      <!-- SOAP standalone -->
+      <div class="soap-standalone" onclick="openSoap()" style="margin-top:16px;">
+        <span style="font-size:22px;">✏️</span>
+        <div style="color:white;">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Méthode SOAP</div>
+          <div style="font-size:11px;opacity:0.7;margin-top:2px;">Scripture, Observation, Application, Prayer</div>
+        </div>
+      </div>
+
+      <!-- Filtres catégories -->
+      <div class="carnet-cats">
+        <div class="carnet-cat active" onclick="filterCarnet('all',this)">Tout</div>
+        <div class="carnet-cat" onclick="filterCarnet('zoom',this)">Zoom</div>
+        <div class="carnet-cat" onclick="filterCarnet('enseignement',this)">Enseignement</div>
+        <div class="carnet-cat" onclick="filterCarnet('meditation',this)">Méditation</div>
+        <div class="carnet-cat" onclick="filterCarnet('priere',this)">Prière</div>
+        <div class="carnet-cat" onclick="filterCarnet('idees',this)">Idées</div>
+      </div>
+
+      <!-- Nouvelle note -->
+      <div class="carnet-new">
+        <div class="card" style="margin:0;">
+          <div class="carnet-new-header">
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--text-dim);">Nouvelle note</div>
+            <select class="carnet-new-cat-select" id="carnet-cat-select">
+              <option value="zoom">Zoom</option>
+              <option value="enseignement">Enseignement</option>
+              <option value="meditation">Méditation</option>
+              <option value="priere">Prière</option>
+              <option value="idees">Idées</option>
+            </select>
+          </div>
+          <textarea class="carnet-textarea" id="carnet-general-textarea" placeholder="Écris ici..."></textarea>
+          <button class="save-btn" onclick="saveCarnetNote()">Sauvegarder</button>
+        </div>
+      </div>
+
+      <!-- Liste des notes -->
+      <div class="carnet-list" id="carnet-notes-list">
+        <div class="empty-msg">Tes notes apparaîtront ici.</div>
+      </div>
+    </div>
+
   <div class="bottom-nav">
     <div class="nav-tab active" onclick="switchTab('aujourd-hui',this)"><span class="nav-icon">☀️</span><span class="nav-label">Aujourd'hui</span></div>
     <div class="nav-tab" onclick="switchTab('retraite',this)"><span class="nav-icon">⛰️</span><span class="nav-label">Retraite</span></div>
     <div class="nav-tab" onclick="switchTab('parole',this)"><span class="nav-icon">📖</span><span class="nav-label">Parole</span></div>
+    <div class="nav-tab" onclick="switchTab('carnet',this)"><span class="nav-icon">📓</span><span class="nav-label">Carnet</span></div>
     <div class="nav-tab" onclick="switchTab('profil',this)"><span class="nav-icon">👤</span><span class="nav-label">Profil</span></div>
   </div>
 </div>
@@ -774,7 +846,20 @@ function renderRetreatNotes() {
   var list = document.getElementById('retreat-notes-list');
   if (!list) return;
   if (!retreatNotes.length) { list.innerHTML = '<div class="empty-msg">Tes notes apparaîtront ici.</div>'; return; }
-  list.innerHTML = retreatNotes.map(function(n) { return '<div class="note-item"><div class="note-date">' + n.date + '</div><div class="note-text">' + n.text + '</div></div>'; }).join('');
+  list.innerHTML = retreatNotes.map(function(n, idx) {
+    return '<div class="note-item" style="position:relative;padding-right:36px;">' +
+      '<button onclick="deleteRetreatNote(' + idx + ')" style="position:absolute;top:8px;right:0;width:28px;height:28px;border-radius:50%;background:rgba(180,60,60,0.08);border:1px solid rgba(180,60,60,0.2);color:#c05050;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>' +
+      '<div class="note-date">' + n.date + '</div>' +
+      '<div class="note-text">' + n.text + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function deleteRetreatNote(idx) {
+  retreatNotes.splice(idx, 1);
+  localStorage.setItem('retreat_notes', JSON.stringify(retreatNotes));
+  renderRetreatNotes();
+  showToast('Note supprimée');
 }
 
 // NOTES
@@ -796,7 +881,20 @@ function renderNotes() {
   var list = document.getElementById('notes-list');
   if (!list) return;
   if (!studyNotes.length) { list.innerHTML = '<div class="empty-msg">Tes notes apparaîtront ici.</div>'; return; }
-  list.innerHTML = studyNotes.map(function(n) { return '<div class="note-item"><div class="note-date">' + n.date + (n.ref ? ', ' + n.ref : '') + '</div><div class="note-text">' + n.text + '</div></div>'; }).join('');
+  list.innerHTML = studyNotes.map(function(n, idx) {
+    return '<div class="note-item" style="position:relative;padding-right:36px;">' +
+      '<button onclick="deleteStudyNote(' + idx + ')" style="position:absolute;top:8px;right:0;width:28px;height:28px;border-radius:50%;background:rgba(180,60,60,0.08);border:1px solid rgba(180,60,60,0.2);color:#c05050;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>' +
+      '<div class="note-date">' + n.date + (n.ref ? ', ' + n.ref : '') + '</div>' +
+      '<div class="note-text">' + n.text + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function deleteStudyNote(idx) {
+  studyNotes.splice(idx, 1);
+  localStorage.setItem('study_notes', JSON.stringify(studyNotes));
+  renderNotes();
+  showToast('Note supprimée');
 }
 
 // PRAYER
@@ -959,6 +1057,71 @@ async function openAdmin() {
 
   if (role === 'berger') loadAdminMembres();
 }
+
+
+// ── CARNET GÉNÉRAL ──
+var carnetNotes = JSON.parse(localStorage.getItem('carnet_notes') || '[]');
+var carnetFilter = 'all';
+
+var catLabels = { zoom:'Zoom', enseignement:'Enseignement', meditation:'Méditation', priere:'Prière', idees:'Idées' };
+var catColors = { zoom:'zoom', enseignement:'enseignement', meditation:'meditation', priere:'priere', idees:'idees' };
+
+function saveCarnetNote() {
+  var ta = document.getElementById('carnet-general-textarea');
+  var cat = document.getElementById('carnet-cat-select').value;
+  if (!ta || !ta.value.trim()) { showToast("Écris quelque chose d'abord"); return; }
+  var now = new Date();
+  var months = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc'];
+  var note = {
+    id: Date.now(),
+    cat: cat,
+    text: ta.value.trim(),
+    date: now.getDate() + ' ' + months[now.getMonth()] + ' ' + String(now.getHours()).padStart(2,'0') + 'h' + String(now.getMinutes()).padStart(2,'0')
+  };
+  carnetNotes.unshift(note);
+  localStorage.setItem('carnet_notes', JSON.stringify(carnetNotes));
+  ta.value = '';
+  renderCarnetNotes();
+  showToast('Note sauvegardée');
+  if (currentMembre && db) {
+    db.from('notes').insert({ membre_id: currentMembre.id, type: cat, contenu: note.text });
+  }
+}
+
+function deleteCarnetNote(id) {
+  carnetNotes = carnetNotes.filter(function(n) { return n.id !== id; });
+  localStorage.setItem('carnet_notes', JSON.stringify(carnetNotes));
+  renderCarnetNotes();
+  showToast('Note supprimée');
+}
+
+function filterCarnet(cat, el) {
+  carnetFilter = cat;
+  document.querySelectorAll('.carnet-cat').forEach(function(c) { c.classList.remove('active'); });
+  el.classList.add('active');
+  renderCarnetNotes();
+}
+
+function renderCarnetNotes() {
+  var list = document.getElementById('carnet-notes-list');
+  if (!list) return;
+  var filtered = carnetFilter === 'all' ? carnetNotes : carnetNotes.filter(function(n) { return n.cat === carnetFilter; });
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-msg">Aucune note dans cette catégorie.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(function(n) {
+    return '<div class="carnet-note-item">' +
+      '<button class="carnet-note-delete" onclick="deleteCarnetNote(' + n.id + ')">×</button>' +
+      '<span class="carnet-note-cat ' + (catColors[n.cat] || '') + '">' + (catLabels[n.cat] || n.cat) + '</span>' +
+      '<div class="carnet-note-text">' + n.text + '</div>' +
+      '<div class="carnet-note-date">' + n.date + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// Init carnet
+(function() { renderCarnetNotes(); })();
 
 async function loadAdminPrayers() {
   if (!db) return;
