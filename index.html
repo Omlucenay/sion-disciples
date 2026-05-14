@@ -1241,7 +1241,7 @@ function saveCarnetNote() {
 }
 
 function deleteCarnetNote(id) {
-  carnetNotes = carnetNotes.filter(function(n) { return n.id !== id; });
+  carnetNotes = carnetNotes.filter(function(n) { return n.id != id; });
   localStorage.setItem('carnet_notes', JSON.stringify(carnetNotes));
   renderCarnetNotes();
   showToast('Note supprimée');
@@ -1295,21 +1295,41 @@ function renderCarnetNotes() {
 }
 
 function editCarnetNote(id) {
-  var note = carnetNotes.find(function(n) { return n.id === id; });
-  if (!note) return;
+  var note = carnetNotes.find(function(n) { return n.id == id; }); // loose == for string/number
+  if (!note) { console.log('Note not found for id:', id, typeof id); return; }
   var textEl = document.getElementById('carnet-text-' + id);
-  if (!textEl) return;
-  var currentText = note.text;
-    '<div style="display:flex;gap:8px;margin-top:8px;">' +
+  if (!textEl) { console.log('TextEl not found:', 'carnet-text-' + id); return; }
 
+  textEl.innerHTML = '';
 
-    '</div>';
+  var ta = document.createElement('textarea');
+  ta.value = note.text;
+  ta.style.cssText = 'width:100%;background:var(--parchment);border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:15px;font-style:italic;color:var(--forest);line-height:1.65;resize:none;outline:none;min-height:80px;display:block;margin-bottom:8px;';
+  textEl.appendChild(ta);
+
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;';
+
+  var saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Enregistrer';
+  saveBtn.style.cssText = 'flex:1;padding:10px;background:var(--forest);border:none;border-radius:8px;color:white;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;';
+  saveBtn.onclick = function(e) { e.stopPropagation(); saveCarnetEdit(id); };
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Annuler';
+  cancelBtn.style.cssText = 'flex:1;padding:10px;background:white;border:1px solid var(--border);border-radius:8px;color:var(--forest);font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;';
+  cancelBtn.onclick = function(e) { e.stopPropagation(); renderCarnetNotes(); };
+
+  btnRow.appendChild(saveBtn);
+  btnRow.appendChild(cancelBtn);
+  textEl.appendChild(btnRow);
+  ta.focus();
 }
 
 function saveCarnetEdit(id) {
   var ta = document.getElementById('carnet-edit-' + id);
   if (!ta || !ta.value.trim()) return;
-  var note = carnetNotes.find(function(n) { return n.id === id; });
+  var note = carnetNotes.find(function(n) { return n.id == id; });
   if (!note) return;
   note.text = ta.value.trim();
   localStorage.setItem('carnet_notes', JSON.stringify(carnetNotes));
@@ -1325,11 +1345,11 @@ function saveCarnetEdit(id) {
     var deleteBtn = e.target.closest('[data-delete-id]');
     if (editBtn) {
       e.stopPropagation();
-      editCarnetNote(parseInt(editBtn.getAttribute('data-edit-id')));
+      editCarnetNote(editBtn.getAttribute('data-edit-id'));
     }
     if (deleteBtn) {
       e.stopPropagation();
-      deleteCarnetNote(parseInt(deleteBtn.getAttribute('data-delete-id')));
+      deleteCarnetNote(deleteBtn.getAttribute('data-delete-id'));
     }
   });
 })();
