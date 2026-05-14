@@ -1304,7 +1304,7 @@ function editCarnetNote(id) {
 
   var ta = document.createElement('textarea');
   ta.value = note.text;
-  ta.style.cssText = 'width:100%;background:var(--parchment);border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:15px;font-style:italic;color:var(--forest);line-height:1.65;resize:none;outline:none;min-height:80px;display:block;margin-bottom:8px;';
+  ta.style.cssText = 'width:100%;background:var(--parchment);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;font-style:italic;color:var(--forest);line-height:1.5;resize:none;outline:none;min-height:60px;display:block;margin-bottom:6px;';
   textEl.appendChild(ta);
 
   var btnRow = document.createElement('div');
@@ -1312,12 +1312,12 @@ function editCarnetNote(id) {
 
   var saveBtn = document.createElement('button');
   saveBtn.textContent = 'Enregistrer';
-  saveBtn.style.cssText = 'flex:1;padding:10px;background:var(--forest);border:none;border-radius:8px;color:white;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;';
+  saveBtn.style.cssText = 'flex:1;padding:7px;background:var(--forest);border:none;border-radius:6px;color:white;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;';
   saveBtn.onclick = function(e) { e.stopPropagation(); saveCarnetEdit(id); };
 
   var cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Annuler';
-  cancelBtn.style.cssText = 'flex:1;padding:10px;background:white;border:1px solid var(--border);border-radius:8px;color:var(--forest);font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer;';
+  cancelBtn.style.cssText = 'flex:1;padding:7px;background:white;border:1px solid var(--border);border-radius:6px;color:var(--forest);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;';
   cancelBtn.onclick = function(e) { e.stopPropagation(); renderCarnetNotes(); };
 
   btnRow.appendChild(saveBtn);
