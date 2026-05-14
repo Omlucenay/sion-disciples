@@ -1313,12 +1313,12 @@ function editCarnetNote(id) {
   var saveBtn = document.createElement('button');
   saveBtn.textContent = 'Enregistrer';
   saveBtn.style.cssText = 'flex:1;padding:7px;background:var(--forest);border:none;border-radius:6px;color:white;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;';
-  saveBtn.onclick = function(e) { e.stopPropagation(); saveCarnetEdit(id); };
+  saveBtn.onclick = function(e) { e.stopPropagation(); e.preventDefault(); saveCarnetEdit(id); return false; };
 
   var cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Annuler';
   cancelBtn.style.cssText = 'flex:1;padding:7px;background:white;border:1px solid var(--border);border-radius:6px;color:var(--forest);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;';
-  cancelBtn.onclick = function(e) { e.stopPropagation(); renderCarnetNotes(); };
+  cancelBtn.onclick = function(e) { e.stopPropagation(); e.preventDefault(); renderCarnetNotes(); return false; };
 
   btnRow.appendChild(saveBtn);
   btnRow.appendChild(cancelBtn);
@@ -1341,6 +1341,9 @@ function saveCarnetEdit(id) {
 (function() {
   renderCarnetNotes();
   document.addEventListener('click', function(e) {
+    // Don't intercept if clicking save/cancel buttons inside edit mode
+    if (e.target.closest('#carnet-notes-list textarea')) return;
+    if (e.target.tagName === 'BUTTON' && !e.target.hasAttribute('data-edit-id') && !e.target.hasAttribute('data-delete-id')) return;
     var editBtn = e.target.closest('[data-edit-id]');
     var deleteBtn = e.target.closest('[data-delete-id]');
     if (editBtn) {
